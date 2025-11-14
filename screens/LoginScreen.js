@@ -39,7 +39,6 @@ const LoginScreen = ({ onLoginSuccess, onSignUpPress }) => {
          return;
       }
       
-      // Pass the db object to the service function
       const users = await getUser(db, email, password); 
 
       if (users.length > 0) {

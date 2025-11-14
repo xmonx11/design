@@ -1,27 +1,20 @@
 import React from 'react';
-import { View, Text, StyleSheet, Button } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const Colors = {
   background: '#FFFFFF',
   textPrimary: '#1C1C1C',
-  redAccent: '#FF3B30',
 };
 
-const HomeScreen = ({ user, onLogout }) => {
+const HomeScreen = ({ user }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Welcome to Smart Reminder!</Text>
-        {user && <Text style={styles.userText}>Logged in as: {user.name} ({user.email})</Text>}
+        <Text style={styles.title}>Hello, {user ? user.name : 'User'}!</Text>
         <Text style={styles.instructionText}>
-          This is your main application screen.
+          Welcome to your Smart Reminder Dashboard.
         </Text>
-        <Button 
-          title="Logout" 
-          onPress={onLogout} 
-          color={Colors.redAccent} 
-        />
       </View>
     </SafeAreaView>
   );
@@ -42,12 +35,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: Colors.textPrimary,
-  },
-  userText: {
-    fontSize: 16,
-    marginBottom: 30,
-    textAlign: 'center',
     color: Colors.textPrimary,
   },
   instructionText: {
