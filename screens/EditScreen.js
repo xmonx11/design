@@ -98,8 +98,10 @@ const EditScreen = ({ task, onClose }) => {
             return `${formattedHours}:${formattedMinutes} ${ampm}`;
         };
 
+        const originalTaskId = typeof task.id === 'string' ? parseInt(task.id.split('-')[0], 10) : task.id;
+
         const updatedTask = {
-            id: task.id,
+            id: originalTaskId,
             title,
             description,
             date: activeType === 'Task' ? formatDate(date) : formatDate(startDate),
