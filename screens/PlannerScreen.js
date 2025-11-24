@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TaskCard } from '../components/TaskCard';
 import { useSQLiteContext } from 'expo-sqlite';
 import { getRepeatingTasksInDateRange, updateTaskStatus } from '../services/Database';
 import { useIsFocused } from '@react-navigation/native';
+import EditScreen from './EditScreen';
 // Importing Lucide icons for the header/tabs
 import { Plus, CalendarCheck, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react-native';
 
@@ -55,6 +56,8 @@ const PlannerScreen = ({ navigation, user }) => {
     const [tasks, setTasks] = useState([]);
     const [schedules, setSchedules] = useState([]);
     const isFocused = useIsFocused();
+    const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+    const [selectedTask, setSelectedTask] = useState(null);
 
     const fetchTasksAndSchedules = useCallback(async () => {
         if (user?.id) {
@@ -86,6 +89,17 @@ const PlannerScreen = ({ navigation, user }) => {
     const handleAddPress = () => {
         navigation?.navigate('Add', { user: user });
     }
+    
+    const handleEdit = (task) => {
+        setSelectedTask(task);
+        setIsEditModalVisible(true);
+    };
+
+    const handleCloseEditModal = () => {
+        setIsEditModalVisible(false);
+        setSelectedTask(null);
+        fetchTasksAndSchedules();
+    };
 
     const handleDone = async (taskId) => {
         try {
@@ -180,7 +194,7 @@ const PlannerScreen = ({ navigation, user }) => {
                         schedules.map(task => {
                             const time24 = convertTo24HourFormat(task.time);
                             const deadline = `${task.date}T${time24}:00`;
-                            return <TaskCard key={task.id.toString()} {...task} deadline={deadline} onDone={handleDone} />;
+                            return <TaskCard key={task.id.toString()} {...task} deadline={deadline} onDone={handleDone} onEdit={handleEdit} />;
                         })
                     ) : (
                         <View style={styles.emptyTasks}>
@@ -192,7 +206,7 @@ const PlannerScreen = ({ navigation, user }) => {
                         tasks.map(task => {
                             const time24 = convertTo24HourFormat(task.time);
                             const deadline = `${task.date}T${time24}:00`;
-                            return <TaskCard key={task.id.toString()} {...task} deadline={deadline} onDone={handleDone} />;
+                            return <TaskCard key={task.id.toString()} {...task} deadline={deadline} onDone={handleDone} onEdit={handleEdit} />;
                         })
                     ) : (
                         <View style={styles.emptyTasks}>
@@ -207,6 +221,19 @@ const PlannerScreen = ({ navigation, user }) => {
             <TouchableOpacity style={styles.floatingActionButton} onPress={handleAddPress}>
                 <Plus size={30} color={LightColors.card} />
             </TouchableOpacity>
+
+            <Modal
+                visible={isEditModalVisible}
+                animationType="slide"
+                onRequestClose={handleCloseEditModal}
+            >
+                {selectedTask && (
+                <EditScreen
+                    task={selectedTask}
+                    onClose={handleCloseEditModal}
+                />
+                )}
+            </Modal>
 
         </SafeAreaView>
     );
