@@ -6,7 +6,8 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { getAllTasks, getTasksByDate, getUpcomingTasks, getCompletedTasks, updateTaskStatus } from '../services/Database';
 import { useIsFocused } from '@react-navigation/native';
 // Importing specific Lucide icons
-import { Bell, Sparkles, Filter } from 'lucide-react-native';
+import { Bell, Sparkles } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import EditScreen from './EditScreen';
 
 // --- Constants ---
@@ -239,7 +240,7 @@ const HomeScreen = ({ user, navigation }) => {
               : 'My Tasks'}
           </Text>
           <TouchableOpacity onPress={toggleFilterVisibility} style={styles.filterIcon}>
-            <Filter size={24} color={isFilterVisible ? LightColors.accentOrange : LightColors.textSecondary} />
+            <Ionicons name="options-outline" size={24} color={isFilterVisible ? LightColors.accentOrange : LightColors.textSecondary} />
           </TouchableOpacity>
         </View>
 

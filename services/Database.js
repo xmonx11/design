@@ -226,7 +226,10 @@ export const updateTask = async (db, task) => {
 };
 
 // Helper to parse date strings (YYYY-MM-DD)
-const parseDate = (dateString) => new Date(dateString);
+const parseDate = (dateString) => {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day);
+};
 
 // Helper to format date objects to YYYY-MM-DD
 const formatDate = (date) => {
@@ -291,6 +294,7 @@ export const getRepeatingTasksInDateRange = async (db, userId, rangeStartDate, r
         }
       }
     }
+    console.log('Generated Tasks:', generatedTasks);
     return generatedTasks;
   } catch (error) {
     console.error("Database get repeating tasks in date range error:", error);
