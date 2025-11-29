@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 
 // ⚠️ Security Warning: Do not store keys in plain text in production.
-const API_KEY = "YOUR_GOOGLE_GENAI_API_KEY_HERE"; 
+const API_KEY = "AIzaSyCvF__25kknJmb4HVYr-uhOaOyD47k_DTg"; 
 
 // Initialize the client with the new SDK
 const ai = new GoogleGenAI({ apiKey: API_KEY });

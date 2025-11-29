@@ -1,9 +1,10 @@
 import * as SQLite from 'expo-sqlite';
 
+// ... (initDB, insertUser, getUser, addTask, deleteTask remain unchanged) ...
+
 export const initDB = async (db) => {
   try {
     await db.execAsync(`
-      -- Create the users table if it doesn't exist
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -24,12 +25,10 @@ export const initDB = async (db) => {
         userId INTEGER NOT NULL,
         FOREIGN KEY (userId) REFERENCES users (id)
       );
-      -- Optional: Set journal mode for performance
       PRAGMA journal_mode=WAL;
     `);
     console.log("Database tables ensured/created.");
 
-    // Migration: Add columns if they doesn't exist
     const tableInfo = await db.getAllAsync("PRAGMA table_info(tasks);");
     
     const columnsToCheck = [
@@ -330,26 +329,23 @@ export const checkForScheduleConflict = async (db, userId, newSchedule, excludeT
       // Skip self when editing
       if (excludeTaskId && existing.id === excludeTaskId) continue;
 
-      // 1. Time Check: If times don't match exactly, we assume no conflict for this app logic
-      if (existing.time !== newSchedule.time) continue;
+      // 1. Time Check: Ensure we compare trimmed strings for safety
+      if (existing.time.trim() !== newSchedule.time.trim()) continue;
 
       // 2. Date Range & Pattern Logic
       const existIsRepeat = existing.repeat_frequency && existing.repeat_frequency !== 'none';
       const newIsRepeat = newSchedule.repeat_frequency && newSchedule.repeat_frequency !== 'none';
 
       const existStart = parseDate(existing.start_date || existing.date);
-      // If end_date is null, treat as infinite future (arbitrary large date)
+      // If end_date is null, treat as infinite future
       const existEnd = existing.end_date ? parseDate(existing.end_date) : new Date(8640000000000000);
       
       const newStart = parseDate(newSchedule.start_date || newSchedule.date);
       const newEnd = newSchedule.end_date ? parseDate(newSchedule.end_date) : new Date(8640000000000000);
 
-      // Check if Date Ranges Overlap at all
-      // If one starts after the other ends, no conflict
+      // Check if Date Ranges Overlap at all (if not overlapping, no conflict)
       if (newStart > existEnd || newEnd < existStart) continue;
 
-      // If Ranges overlap, check specific collisions
-      
       // Case A: Both are One-Time
       if (!existIsRepeat && !newIsRepeat) {
         if (existing.date === newSchedule.date) return true;
@@ -374,10 +370,8 @@ export const checkForScheduleConflict = async (db, userId, newSchedule, excludeT
 
       // Case C: Both are Repeating
       if (existIsRepeat && newIsRepeat) {
-        // If either is daily, and ranges overlap (which we checked), they conflict
         if (existing.repeat_frequency === 'daily' || newSchedule.repeat_frequency === 'daily') return true;
         
-        // Both are weekly: check if they share any day of the week
         if (existing.repeat_frequency === 'weekly' && newSchedule.repeat_frequency === 'weekly') {
           const days1 = typeof existing.repeat_days === 'string' ? JSON.parse(existing.repeat_days) : existing.repeat_days || [];
           const days2 = typeof newSchedule.repeat_days === 'string' ? JSON.parse(newSchedule.repeat_days) : newSchedule.repeat_days || [];
@@ -391,6 +385,6 @@ export const checkForScheduleConflict = async (db, userId, newSchedule, excludeT
     return false; // No conflict found
   } catch (error) {
     console.error("Error checking conflict:", error);
-    return false; // Fail safe
+    return false; 
   }
 };

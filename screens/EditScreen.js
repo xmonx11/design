@@ -127,14 +127,6 @@ const EditScreen = ({ task, onClose }) => {
         });
     };
 
-    const handleEverydayToggle = () => {
-        if (repeatDays.length === weekDays.length) {
-            setRepeatDays([]);
-        } else {
-            setRepeatDays(weekDays);
-        }
-    };
-
     const CategoryChip = ({ item }) => {
         const isActive = category === item.name;
         return (
@@ -158,20 +150,23 @@ const EditScreen = ({ task, onClose }) => {
         }
 
         const timeString = formatTime(time);
+        
+        // Handle logic for repeating instances (e.g., ID "15-2023-10-27" -> 15)
         const originalTaskId = typeof task.id === 'string' ? parseInt(task.id.split('-')[0], 10) : task.id;
 
-        // Check for conflict if it is a Schedule
+        // --- CONFLICT CHECK LOGIC ---
+        // Only run for Schedules, not Tasks
         if (activeType === 'Schedule') {
-            const isConflict = await checkForScheduleConflict(db, task.userId, {
-                time: timeString,
-                date: formatDate(date),
+            const hasConflict = await checkForScheduleConflict(db, task.userId, {
+                time: timeString, 
+                date: formatDate(startDate), // For one-time schedules, the date is the start date.
                 start_date: formatDate(startDate),
                 end_date: formatDate(endDate),
                 repeat_frequency: repeatFrequency,
                 repeat_days: repeatDays
-            }, originalTaskId); // Pass original ID to exclude self
+            }, originalTaskId); // Pass ID to exclude self from check
 
-            if (isConflict) {
+            if (hasConflict) {
                 showAlert('Schedule Conflict', `You already have a schedule at ${timeString}.`, 'error');
                 return;
             }
@@ -209,7 +204,7 @@ const EditScreen = ({ task, onClose }) => {
 
         try {
             await updateTask(db, updatedTask); 
-            showAlert('Success', 'Task updated successfully!', 'success', [{
+            showAlert('Success', 'Updated successfully!', 'success', [{
                 text: 'OK',
                 onPress: () => {
                     closeAlert();
@@ -218,7 +213,7 @@ const EditScreen = ({ task, onClose }) => {
             }]);
         } catch (error) {
             console.error("Failed to update task:", error);
-            showAlert('Error', 'Failed to update task.', 'error');
+            showAlert('Error', 'Failed to update.', 'error');
         }
     };
 
@@ -248,7 +243,7 @@ const EditScreen = ({ task, onClose }) => {
                             style={[styles.titleInput, { color: colors.textPrimary }]} 
                             value={title} 
                             onChangeText={setTitle} 
-                            placeholder="Task Title" 
+                            placeholder="Title" 
                             placeholderTextColor={colors.textSecondary} 
                         />
                     </View>
@@ -536,20 +531,6 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
 
-    // Location
-    inputWithIconContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 15,
-        borderRadius: 16,
-        height: 50,
-    },
-    inputWithIcon: {
-        flex: 1,
-        fontSize: 16,
-        height: '100%',
-    },
-
     // Repeat
     repeatOptionsContainer: {
         flexDirection: 'row',
@@ -585,6 +566,20 @@ const styles = StyleSheet.create({
     dayText: {
         fontWeight: 'bold',
         fontSize: 14,
+    },
+
+    // Location
+    inputWithIconContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 15,
+        borderRadius: 16,
+        height: 50,
+    },
+    inputWithIcon: {
+        flex: 1,
+        fontSize: 16,
+        height: '100%',
     },
 
     // Reminder

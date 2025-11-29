@@ -202,7 +202,7 @@ const AddScreen = ({ navigation, route, user: userProp }) => {
             if (activeType === 'Schedule') {
                 const isConflict = await checkForScheduleConflict(db, user.id, {
                     time: dueTime,
-                    date: dueDate,
+                    date: startDateString, // For one-time schedules, the date is the start date.
                     start_date: startDateString,
                     end_date: endDateString,
                     repeat_frequency: repeatFrequency,
