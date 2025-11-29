@@ -47,8 +47,8 @@ export const registerForPushNotificationsAsync = async () => {
   return true;
 };
 
-// UPDATED: Accepts reminderMinutes to calculate the correct trigger time
-export const scheduleTaskNotification = async (title, date, time, reminderMinutes = 5) => {
+// UPDATED: Accepts reminderMinutes and type to calculate the correct trigger time and customize content
+export const scheduleTaskNotification = async (title, date, time, reminderMinutes = 5, type = 'Task') => {
   try {
     // Parse the date (YYYY-MM-DD)
     const [year, month, day] = date.split('-').map(Number);
@@ -70,14 +70,21 @@ export const scheduleTaskNotification = async (title, date, time, reminderMinute
     // If the trigger time is in the past, don't schedule
     if (triggerDate < new Date()) return null;
 
-    // Enhanced Notification Content
+    // Determine Title and Body based on Type
+    const isTask = type === 'Task';
+    const notificationTitle = isTask ? "🔔 Upcoming Task" : "📅 Upcoming Schedule";
+    const bodyText = isTask 
+        ? `Your task "${title}" starts in ${reminderMinutes > 0 ? `in ${reminderMinutes} minutes` : 'now'}!`
+        : `Your schedule "${title}" starts ${reminderMinutes > 0 ? `in ${reminderMinutes} minutes` : 'now'}!`;
+
+
     const id = await Notifications.scheduleNotificationAsync({
       content: {
-        title: "🔔 Upcoming Task",
-        body: `Your task "${title}" starts in ${reminderMinutes} minutes!`,
+        title: notificationTitle,
+        body: bodyText,
         sound: 'default',
         color: '#FF9500', // Android accent color
-        data: { date, time }, // Optional data payload
+        data: { date, time, type }, // Optional data payload
       },
       trigger: triggerDate,
     });

@@ -169,10 +169,12 @@ const HomeScreen = ({ user, navigation }) => {
     }
   };
 
-  const handleDelete = (taskId) => {
+  const handleDelete = (taskId, type) => {
+    const itemType = type === 'Task' ? 'Task' : 'Schedule';
+
     showAlert(
-        'Delete Task',
-        'Are you sure you want to delete this task? This action cannot be undone.',
+        `Delete ${itemType}`,
+        `Are you sure you want to delete this ${itemType.toLowerCase()}? This action cannot be undone.`,
         'info',
         [
             { text: 'Cancel', style: 'cancel', onPress: closeAlert },
@@ -243,9 +245,16 @@ const HomeScreen = ({ user, navigation }) => {
     setIsFilterVisible(!isFilterVisible);
   };
 
-  const completedTasksCount = allTasks.filter(task => task.status === 'done').length;
-  const pendingTasksCount = allTasks.length - completedTasksCount;
-  const donePercentage = allTasks.length > 0 ? Math.round((completedTasksCount / allTasks.length) * 100) : 0;
+  // --- REPLACED: Calculations for separate Task/Schedule counts
+  const taskItems = allTasks.filter(t => t.type === 'Task');
+  const scheduleItems = allTasks.filter(t => t.type !== 'Task');
+
+  const totalTasksCount = taskItems.length;
+  const totalSchedulesCount = scheduleItems.length;
+
+  const completedTasksCount = taskItems.filter(t => t.status === 'done').length;
+  const completedSchedulesCount = scheduleItems.filter(t => t.status === 'done').length;
+  const allCompletedCount = allTasks.filter(t => t.status === 'done').length;
 
   // Custom Tab Chip Component
   const TabChip = ({ label, active }) => (
@@ -308,21 +317,54 @@ const HomeScreen = ({ user, navigation }) => {
                 </View>
             </View>
             
+            {/* UPDATED: Card Stats based on activeFilter */}
             <View style={styles.cardStats}>
-                <View style={styles.statItem}>
-                    <Text style={styles.statNumber}>{allTasks.length}</Text>
-                    <Text style={styles.statLabel}>Total Tasks</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                    <Text style={styles.statNumber}>{donePercentage}%</Text>
-                    <Text style={styles.statLabel}>Completed</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                    <Text style={styles.statNumber}>{pendingTasksCount}</Text>
-                    <Text style={styles.statLabel}>Pending</Text>
-                </View>
+                {activeFilter === 'All' && (
+                    <>
+                        <View style={styles.statItem}>
+                            <Text style={styles.statNumber}>{totalTasksCount}</Text>
+                            <Text style={styles.statLabel}>Total Task</Text>
+                        </View>
+                        <View style={styles.statDivider} />
+                        <View style={styles.statItem}>
+                            <Text style={styles.statNumber}>{totalSchedulesCount}</Text>
+                            <Text style={styles.statLabel}>Total Schedule</Text>
+                        </View>
+                        <View style={styles.statDivider} />
+                        <View style={styles.statItem}>
+                            <Text style={styles.statNumber}>{allCompletedCount}</Text>
+                            <Text style={styles.statLabel}>Completed</Text>
+                        </View>
+                    </>
+                )}
+
+                {activeFilter === 'Task' && (
+                    <>
+                        <View style={styles.statItem}>
+                            <Text style={styles.statNumber}>{totalTasksCount}</Text>
+                            <Text style={styles.statLabel}>Total Task</Text>
+                        </View>
+                        <View style={styles.statDivider} />
+                        <View style={styles.statItem}>
+                            <Text style={styles.statNumber}>{completedTasksCount}</Text>
+                            <Text style={styles.statLabel}>Completed</Text>
+                        </View>
+                    </>
+                )}
+
+                {activeFilter === 'Schedule' && (
+                    <>
+                        <View style={styles.statItem}>
+                            <Text style={styles.statNumber}>{totalSchedulesCount}</Text>
+                            <Text style={styles.statLabel}>Total Schedule</Text>
+                        </View>
+                        <View style={styles.statDivider} />
+                        <View style={styles.statItem}>
+                            <Text style={styles.statNumber}>{completedSchedulesCount}</Text>
+                            <Text style={styles.statLabel}>Completed</Text>
+                        </View>
+                    </>
+                )}
             </View>
         </LinearGradient>
 
@@ -568,7 +610,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
   },
   // Header Styles
   header: {

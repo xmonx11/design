@@ -215,15 +215,19 @@ const AddScreen = ({ navigation, route, user: userProp }) => {
                 }
             }
 
+            // Schedule notification for BOTH Tasks and Schedules
             let notificationId = null;
-            if (activeType === 'Task') { 
-                notificationId = await scheduleTaskNotification(
-                    taskTitle, 
-                    dueDate, 
-                    dueTime, 
-                    reminderMinutes
-                );
-            }
+            
+            // Determine correct date variable based on type
+            const targetDate = activeType === 'Task' ? dueDate : startDateString;
+
+            notificationId = await scheduleTaskNotification(
+                taskTitle, 
+                targetDate, 
+                dueTime, 
+                reminderMinutes,
+                activeType // Pass 'Task' or 'Schedule'
+            );
 
             await addTask(db, {
                 title: taskTitle,
@@ -490,7 +494,7 @@ const AddScreen = ({ navigation, route, user: userProp }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingHorizontal: 20,
+        paddingHorizontal: 10,
     },
     header: {
         flexDirection: 'row',

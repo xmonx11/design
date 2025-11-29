@@ -112,19 +112,20 @@ const MissedScreen = ({ user }) => {
         }
     };
 
-    const handleDelete = (taskId) => {
+    // UPDATED: Accept 'type' argument
+    const handleDelete = (taskId, type) => {
+        const itemType = type === 'Task' ? 'Task' : 'Schedule';
+
         showAlert(
-            'Delete Task',
-            'Are you sure you want to delete this task? This action cannot be undone.',
+            `Delete ${itemType}`,
+            `Are you sure you want to delete this ${itemType.toLowerCase()}? This action cannot be undone.`,
             'info',
             [
                 { text: 'Cancel', style: 'cancel', onPress: closeAlert },
                 { 
                     text: 'Delete', 
-                    onPress: () => {
-                        closeAlert();
-                        executeDeleteTask(taskId);
-                    } 
+                    onPress: () => { closeAlert(); executeDeleteTask(taskId); },
+                    style: 'destructive'
                 }
             ]
         );
@@ -257,14 +258,14 @@ const MissedScreen = ({ user }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingHorizontal: 20,
+        paddingHorizontal: 10,
     },
     header: {
         paddingVertical: 15,
         marginBottom: 10,
     },
     headerTitle: {
-        fontSize: 28,
+        fontSize: 24,
         fontWeight: 'bold',
     },
     

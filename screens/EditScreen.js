@@ -174,17 +174,21 @@ const EditScreen = ({ task, onClose }) => {
 
         let newNotificationId = task.notification_id;
         
-        if (activeType === 'Task') {
-            if (task.notification_id) {
-                await cancelTaskNotification(task.notification_id);
-            }
-            newNotificationId = await scheduleTaskNotification(
-                title, 
-                formatDate(date), 
-                timeString, 
-                reminderMinutes
-            );
+        // Cancel the old notification before creating a new one
+        if (task.notification_id) {
+            await cancelTaskNotification(task.notification_id);
         }
+
+        // Determine correct date variable based on type
+        const targetDate = activeType === 'Task' ? formatDate(date) : formatDate(startDate);
+
+        newNotificationId = await scheduleTaskNotification(
+            title, 
+            targetDate, 
+            timeString, 
+            reminderMinutes,
+            activeType // Pass 'Task' or 'Schedule'
+        );
 
         const updatedTask = {
             id: originalTaskId,
@@ -451,7 +455,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
+        paddingHorizontal: 10,
         paddingVertical: 10,
         marginBottom: 10,
     },
@@ -460,7 +464,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     scrollContent: {
-        paddingHorizontal: 20,
+        paddingHorizontal: 10,
         paddingBottom: 40,
     },
     

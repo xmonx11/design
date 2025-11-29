@@ -202,11 +202,11 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        paddingHorizontal: 20,
+        paddingHorizontal: 10,
         paddingBottom: 40,
     },
     headerTitle: {
-        fontSize: 28,
+        fontSize: 24,
         fontWeight: 'bold',
         marginBottom: 20,
         marginTop: 10,

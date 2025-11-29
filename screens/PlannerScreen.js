@@ -123,14 +123,17 @@ const PlannerScreen = ({ navigation, user }) => {
         }
     };
 
-    const handleDelete = (taskId) => {
+    // UPDATED: Accept 'type' argument
+    const handleDelete = (taskId, type) => {
+        const itemType = type === 'Task' ? 'Task' : 'Schedule';
+        
         showAlert(
-            'Delete Task',
-            'Are you sure you want to delete this task? This action cannot be undone.',
+            `Delete ${itemType}`, // Dynamic Title
+            `Are you sure you want to delete this ${itemType.toLowerCase()}? This action cannot be undone.`, // Dynamic Message
             'info',
             [
                 { text: 'Cancel', style: 'cancel', onPress: closeAlert },
-                { text: 'Delete', onPress: () => { closeAlert(); executeDeleteTask(taskId); } }
+                { text: 'Delete', onPress: () => { closeAlert(); executeDeleteTask(taskId); }, style: 'destructive' }
             ]
         );
     };
@@ -348,7 +351,7 @@ const PlannerScreen = ({ navigation, user }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingHorizontal: 20,
+        paddingHorizontal: 10,
     },
     // Header
     headerContainer: {

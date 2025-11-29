@@ -14,7 +14,8 @@ const getCategoryColor = (type) => {
   }
 };
 
-export const TaskCard = ({ id, type, title, description, time, location, date, deadline, status, onDone, onEdit, onDelete }) => {
+// UPDATED: Added 'userId' to props destructuring
+export const TaskCard = ({ id, userId, type, title, description, time, location, date, deadline, status, onDone, onEdit, onDelete }) => {
   const { colors } = useTheme();
   const [remainingTime, setRemainingTime] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -83,8 +84,11 @@ export const TaskCard = ({ id, type, title, description, time, location, date, d
     // Small delay to allow ripple/press effect
     setTimeout(() => {
         if (action === 'done') onDone(id);
-        if (action === 'edit') onEdit({ id, type, title, description, time, location, date, deadline, status });
-        if (action === 'delete') onDelete && onDelete(id);
+        // UPDATED: Passed 'userId' in the object below
+        if (action === 'edit') onEdit({ id, userId, type, title, description, time, location, date, deadline, status });
+        
+        // UPDATED: Pass 'type' as the second argument
+        if (action === 'delete') onDelete && onDelete(id, type);
         setIsEditing(false);
     }, 100);
   };
