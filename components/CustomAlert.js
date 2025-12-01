@@ -46,7 +46,7 @@ const CustomAlert = ({ visible, title, message, type = 'info', buttons, onClose 
         }
     };
 
-    // Header Color helper (for subtle top border/accent)
+    // Header Color helper (Used for icon background)
     const getHeaderColor = () => {
         switch (type) {
             case 'success': return colors.greenAccent;
@@ -70,12 +70,11 @@ const CustomAlert = ({ visible, title, message, type = 'info', buttons, onClose 
                             backgroundColor: colors.card, 
                             opacity: opacityAnim,
                             transform: [{ scale: scaleAnim }],
-                            shadowColor: getHeaderColor(), // Dynamic shadow color
+                            shadowColor: '#000', 
                         }
                     ]}
                 >
-                    {/* Decorative Top Line */}
-                    <View style={[styles.topAccent, { backgroundColor: getHeaderColor() }]} />
+                    {/* Decorative Top Line REMOVED */}
 
                     <View style={styles.content}>
                         <View style={[styles.iconWrapper, { backgroundColor: getHeaderColor() + '15' }]}>
@@ -144,7 +143,7 @@ const CustomAlert = ({ visible, title, message, type = 'info', buttons, onClose 
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.65)', // Slightly darker for better focus
+        backgroundColor: 'rgba(0, 0, 0, 0.65)', 
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -158,10 +157,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 20,
     },
-    topAccent: {
-        height: 4,
-        width: '100%',
-    },
+    // topAccent style removed
     content: {
         padding: 24,
         alignItems: 'center',
@@ -205,7 +201,7 @@ const styles = StyleSheet.create({
     },
     outlineButton: {
         borderRadius: 14,
-        paddingVertical: 13, // Adjust for border width
+        paddingVertical: 13, 
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,

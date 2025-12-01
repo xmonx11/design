@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Modal, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, Animated, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Modal, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, Animated, ScrollView, Keyboard } from 'react-native'; // Added Keyboard import
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TaskCard } from '../components/TaskCard';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -217,7 +217,9 @@ const HomeScreen = ({ user, navigation }) => {
   };
 
   const handleAiSubmit = async () => {
+    Keyboard.dismiss(); // FIX: Dismiss keyboard to prevent resize flicker
     if (!aiPrompt.trim()) return;
+    
     setIsAiLoading(true);
     try {
       const today = new Date().toISOString().split('T')[0]; 
@@ -245,7 +247,7 @@ const HomeScreen = ({ user, navigation }) => {
     setIsFilterVisible(!isFilterVisible);
   };
 
-  // --- REPLACED: Calculations for separate Task/Schedule counts
+  // Calculations for stats
   const taskItems = allTasks.filter(t => t.type === 'Task');
   const scheduleItems = allTasks.filter(t => t.type !== 'Task');
 
@@ -300,7 +302,7 @@ const HomeScreen = ({ user, navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Improved Summary Card with Gradient */}
+        {/* Summary Card */}
         <LinearGradient
             colors={[colors.accentOrange, colors.progressRed]}
             start={{ x: 0, y: 0 }}
@@ -313,11 +315,10 @@ const HomeScreen = ({ user, navigation }) => {
                     <Text style={styles.cardDay}>{dayName}</Text>
                 </View>
                 <View style={styles.cardIcon}>
-                    <Sparkles size={24} color="#FFF" style={{ opacity: 0.8 }} />
+                    <Sparkles size={32} color="#FFF" />
                 </View>
             </View>
             
-            {/* UPDATED: Card Stats based on activeFilter */}
             <View style={styles.cardStats}>
                 {activeFilter === 'All' && (
                     <>
@@ -377,7 +378,6 @@ const HomeScreen = ({ user, navigation }) => {
                 </TouchableOpacity>
             </View>
 
-            {/* Sub-Filters (Task vs Schedule) */}
             {isFilterVisible && (
                 <View style={styles.subFilterContainer}>
                     {['All', 'Task', 'Schedule'].map((filter) => (
@@ -394,7 +394,6 @@ const HomeScreen = ({ user, navigation }) => {
                 </View>
             )}
 
-            {/* Time Tabs */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll} contentContainerStyle={styles.tabsContent}>
                 {['All', 'Today', 'Upcoming', 'Completed'].map((tab) => (
                     <TouchableOpacity key={tab} onPress={() => setActiveTab(tab)}>
@@ -433,8 +432,6 @@ const HomeScreen = ({ user, navigation }) => {
         <Sparkles size={28} color="#FFF" />
       </TouchableOpacity>
 
-      {/* --- Modals & Alerts --- */}
-      
       <Modal
         visible={isEditModalVisible}
         animationType="slide"
@@ -448,136 +445,145 @@ const HomeScreen = ({ user, navigation }) => {
         )}
       </Modal>
 
-      {/* --- Enhanced AI Bottom Sheet Modal --- */}
+      {/* --- FIXED AI MODAL STRUCTURE --- */}
       <Modal
         visible={isAiModalVisible}
         animationType="slide"
         transparent={true}
         onRequestClose={() => setAiModalVisible(false)}
       >
-        <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.modalOverlay}
-        >
-            <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setAiModalVisible(false)} />
+        <View style={styles.modalOverlay}>
+            {/* Backdrop is now independent of KeyboardAvoidingView */}
+            <TouchableOpacity 
+                style={styles.modalBackdrop} 
+                activeOpacity={1} 
+                onPress={() => setAiModalVisible(false)} 
+            />
             
-            <View style={[styles.aiBottomSheet, { backgroundColor: colors.card }]}>
-                {/* Drag Handle */}
-                <View style={styles.dragHandleContainer}>
-                    <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
-                </View>
-
-                {/* Header */}
-                <View style={styles.aiModalHeader}>
-                    <View style={[styles.aiIconBadge, { backgroundColor: colors.accentOrange + '15' }]}>
-                        <Wand2 size={24} color={colors.accentOrange} />
+            {/* KeyboardAvoidingView only wraps the content bottom sheet */}
+            <KeyboardAvoidingView 
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.aiKeyboardContainer}
+                pointerEvents="box-none" // Allows touches to pass through empty space to backdrop
+            >
+                <View style={[styles.aiBottomSheet, { backgroundColor: colors.card }]}>
+                    {/* Drag Handle */}
+                    <View style={styles.dragHandleContainer}>
+                        <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
                     </View>
-                    <View style={styles.aiTitleContainer}>
-                        <Text style={[styles.aiModalTitle, { color: colors.textPrimary }]}>Smart Assistant</Text>
-                        <Text style={[styles.aiModalSubtitle, { color: colors.textSecondary }]}>
-                            {aiResult ? "Here is what I found" : "How can I help you schedule?"}
-                        </Text>
-                    </View>
-                    <TouchableOpacity onPress={() => setAiModalVisible(false)} style={styles.closeButton}>
-                        <X size={24} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                </View>
 
-                {/* Content Area */}
-                {!aiResult && (
-                    <View style={styles.aiInputWrapper}>
-                        <TextInput 
-                            style={[styles.aiTextInput, { 
-                                backgroundColor: colors.inputBackground, 
-                                color: colors.textPrimary,
-                                borderColor: colors.border
-                            }]}
-                            placeholder="e.g., Schedule a dentist appointment for next Monday at 10 AM..."
-                            placeholderTextColor={colors.textSecondary}
-                            value={aiPrompt}
-                            onChangeText={setAiPrompt}
-                            multiline
-                            textAlignVertical="top"
-                        />
-                        <View style={styles.inputFooter}>
-                            <Text style={[styles.inputHint, { color: colors.textSecondary }]}>
-                                Try mentioning dates, times, or durations.
+                    {/* Header */}
+                    <View style={styles.aiModalHeader}>
+                        <View style={[styles.aiIconBadge, { backgroundColor: colors.accentOrange + '15' }]}>
+                            <Wand2 size={24} color={colors.accentOrange} />
+                        </View>
+                        <View style={styles.aiTitleContainer}>
+                            <Text style={[styles.aiModalTitle, { color: colors.textPrimary }]}>Smart Assistant</Text>
+                            <Text style={[styles.aiModalSubtitle, { color: colors.textSecondary }]}>
+                                {aiResult ? "Here is what I found" : "How can I help you schedule?"}
                             </Text>
                         </View>
+                        <TouchableOpacity onPress={() => setAiModalVisible(false)} style={styles.closeButton}>
+                            <X size={24} color={colors.textSecondary} />
+                        </TouchableOpacity>
                     </View>
-                )}
 
-                {/* Loading State */}
-                {isAiLoading && (
-                    <View style={styles.aiLoadingContainer}>
-                        <ActivityIndicator size="large" color={colors.accentOrange} />
-                        <Text style={[styles.aiLoadingText, { color: colors.textSecondary }]}>Generating plan...</Text>
-                    </View>
-                )}
-
-                {/* Result Card */}
-                {aiResult && !isAiLoading && (
-                    <View style={styles.aiResultWrapper}>
-                        <View style={[styles.recommendationCard, { backgroundColor: colors.background, borderColor: colors.accentOrange }]}>
-                            <View style={styles.recommendationHeader}>
-                                <Text style={[styles.recommendationTitle, { color: colors.textPrimary }]}>{aiResult.title}</Text>
-                                <View style={[styles.timeBadge, { backgroundColor: colors.accentOrange }]}>
-                                    <Text style={styles.timeBadgeText}>{aiResult.time}</Text>
-                                </View>
-                            </View>
-                            <View style={styles.recommendationMeta}>
-                                <Text style={[styles.recommendationDate, { color: colors.textSecondary }]}>
-                                    <Calendar size={14} color={colors.textSecondary} /> {aiResult.date}
+                    {/* Content Area */}
+                    {!aiResult && (
+                        <View style={styles.aiInputWrapper}>
+                            <TextInput 
+                                style={[styles.aiTextInput, { 
+                                    backgroundColor: colors.inputBackground, 
+                                    color: colors.textPrimary,
+                                    borderColor: colors.border
+                                }]}
+                                placeholder="e.g., Schedule a dentist appointment for next Monday at 10 AM..."
+                                placeholderTextColor={colors.textSecondary}
+                                value={aiPrompt}
+                                onChangeText={setAiPrompt}
+                                multiline
+                                textAlignVertical="top"
+                            />
+                            <View style={styles.inputFooter}>
+                                <Text style={[styles.inputHint, { color: colors.textSecondary }]}>
+                                    Try mentioning dates, times, or durations.
                                 </Text>
                             </View>
-                            <View style={styles.divider} />
-                            <Text style={[styles.recommendationReason, { color: colors.textSecondary }]}>
-                                "{aiResult.reason}"
-                            </Text>
                         </View>
+                    )}
+
+                    {/* Loading State */}
+                    {isAiLoading && (
+                        <View style={styles.aiLoadingContainer}>
+                            <ActivityIndicator size="large" color={colors.accentOrange} />
+                            <Text style={[styles.aiLoadingText, { color: colors.textSecondary }]}>Generating plan...</Text>
+                        </View>
+                    )}
+
+                    {/* Result Card */}
+                    {aiResult && !isAiLoading && (
+                        <View style={styles.aiResultWrapper}>
+                            <View style={[styles.recommendationCard, { backgroundColor: colors.background, borderColor: colors.accentOrange }]}>
+                                <View style={styles.recommendationHeader}>
+                                    <Text style={[styles.recommendationTitle, { color: colors.textPrimary }]}>{aiResult.title}</Text>
+                                    <View style={[styles.timeBadge, { backgroundColor: colors.accentOrange }]}>
+                                        <Text style={styles.timeBadgeText}>{aiResult.time}</Text>
+                                    </View>
+                                </View>
+                                <View style={styles.recommendationMeta}>
+                                    <Text style={[styles.recommendationDate, { color: colors.textSecondary }]}>
+                                        <Calendar size={14} color={colors.textSecondary} /> {aiResult.date}
+                                    </Text>
+                                </View>
+                                <View style={styles.divider} />
+                                <Text style={[styles.recommendationReason, { color: colors.textSecondary }]}>
+                                    "{aiResult.reason}"
+                                </Text>
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Actions */}
+                    <View style={styles.aiActions}>
+                        {!aiResult && !isAiLoading && (
+                            <TouchableOpacity 
+                                onPress={handleAiSubmit}
+                                activeOpacity={0.8}
+                                style={styles.fullWidthButton}
+                            >
+                                <LinearGradient
+                                    colors={[colors.accentOrange, colors.progressRed]}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={styles.gradientButton}
+                                >
+                                    <Sparkles size={20} color="#FFF" style={{ marginRight: 8 }} />
+                                    <Text style={styles.gradientButtonText}>Generate Schedule</Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        )}
+
+                        {aiResult && (
+                            <View style={styles.resultActions}>
+                                <TouchableOpacity 
+                                    style={[styles.actionButton, { borderColor: colors.border, borderWidth: 1 }]} 
+                                    onPress={() => setAiResult(null)}
+                                >
+                                    <Text style={[styles.actionButtonText, { color: colors.textPrimary }]}>Try Again</Text>
+                                </TouchableOpacity>
+                                
+                                <TouchableOpacity 
+                                    style={[styles.actionButton, { backgroundColor: colors.accentOrange }]} 
+                                    onPress={handleAddRecommendation}
+                                >
+                                    <Text style={[styles.actionButtonText, { color: '#FFF' }]}>Add to Planner</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
                     </View>
-                )}
-
-                {/* Actions */}
-                <View style={styles.aiActions}>
-                    {!aiResult && !isAiLoading && (
-                        <TouchableOpacity 
-                            onPress={handleAiSubmit}
-                            activeOpacity={0.8}
-                            style={styles.fullWidthButton}
-                        >
-                            <LinearGradient
-                                colors={[colors.accentOrange, colors.progressRed]}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={styles.gradientButton}
-                            >
-                                <Sparkles size={20} color="#FFF" style={{ marginRight: 8 }} />
-                                <Text style={styles.gradientButtonText}>Generate Schedule</Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                    )}
-
-                    {aiResult && (
-                        <View style={styles.resultActions}>
-                            <TouchableOpacity 
-                                style={[styles.actionButton, { borderColor: colors.border, borderWidth: 1 }]} 
-                                onPress={() => setAiResult(null)}
-                            >
-                                <Text style={[styles.actionButtonText, { color: colors.textPrimary }]}>Try Again</Text>
-                            </TouchableOpacity>
-                            
-                            <TouchableOpacity 
-                                style={[styles.actionButton, { backgroundColor: colors.greenAccent }]} 
-                                onPress={handleAddRecommendation}
-                            >
-                                <Text style={[styles.actionButtonText, { color: '#FFF' }]}>Add to Planner</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
                 </View>
-            </View>
-        </KeyboardAvoidingView>
+            </KeyboardAvoidingView>
+        </View>
       </Modal>
 
       {/* Toast Notification */}
@@ -605,6 +611,7 @@ const HomeScreen = ({ user, navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  // ... (Existing styles remain the same until modalOverlay) ...
   container: {
     flex: 1,
   },
@@ -612,7 +619,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 10,
   },
-  // Header Styles
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -655,7 +661,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    // shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -669,12 +674,10 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#FF4500', // red accent
+    backgroundColor: '#FF4500',
     borderWidth: 2,
     borderColor: '#FFF',
   },
-
-  // Gradient Card Styles
   gradientCard: {
     borderRadius: 24,
     padding: 20,
@@ -704,9 +707,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   cardIcon: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 12,
-    padding: 8,
+    justifyContent: 'center',
   },
   cardStats: {
     flexDirection: 'row',
@@ -734,8 +735,6 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
-
-  // Controls Section (Filter & Tabs)
   controlsContainer: {
     marginBottom: 15,
   },
@@ -786,10 +785,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-
-  // Task List
   taskList: {
-    paddingBottom: 100, // Space for FAB
+    paddingBottom: 100,
   },
   emptyTasks: {
     alignItems: 'center',
@@ -798,11 +795,9 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
   },
-
-  // AI Floating Button
   aiFloatingButton: {
     position: 'absolute',
-    bottom: 110,
+    bottom: 80,
     right: 20,
     width: 64,
     height: 64,
@@ -816,8 +811,12 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
 
-  // --- Enhanced AI Modal Styles ---
+  // --- UPDATED AI MODAL STYLES ---
   modalOverlay: {
+    flex: 1,
+    // justifyContent: 'flex-end', // Moved to aiKeyboardContainer
+  },
+  aiKeyboardContainer: {
     flex: 1,
     justifyContent: 'flex-end',
   },
@@ -902,8 +901,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  
-  // AI Result Card
   aiResultWrapper: {
     marginBottom: 25,
   },
@@ -911,7 +908,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderLeftWidth: 6, // Accent border
+    borderLeftWidth: 6,
   },
   recommendationHeader: {
     flexDirection: 'row',
@@ -952,8 +949,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     lineHeight: 20,
   },
-
-  // Modal Actions
   aiActions: {
     marginTop: 10,
   },
@@ -993,11 +988,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-
-  // Toast
   toastContainer: {
       position: 'absolute',
-      bottom: 110,
+      bottom: 80,
       alignSelf: 'center',
       paddingVertical: 12,
       paddingHorizontal: 24,

@@ -254,7 +254,7 @@ const PlannerScreen = ({ navigation, user }) => {
                         <Text style={styles.summaryFullDate}>{currentDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</Text>
                     </View>
                     <View style={styles.summaryIcon}>
-                        <Briefcase size={24} color="#FFF" style={{ opacity: 0.8 }} />
+                        <Calendar size={32} color="#FFF" />
                     </View>
                 </View>
                 
@@ -419,9 +419,7 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     summaryIcon: {
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        borderRadius: 12,
-        padding: 8,
+        justifyContent: 'center',
     },
     summaryStats: {
         flexDirection: 'row',

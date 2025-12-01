@@ -40,5 +40,3 @@ yarn-error.*
 /ios
 /android
 
-# API Services (contains keys)
-services/AiServices.js

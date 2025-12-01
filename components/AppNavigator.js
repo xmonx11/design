@@ -31,7 +31,8 @@ const GradientIcon = ({ IconComponent, size = 24, colors }) => (
   </MaskedView>
 );
 
-const TabNavigator = ({ user, onLogout }) => {
+// UPDATED: Destructure onUpdateUser
+const TabNavigator = ({ user, onLogout, onUpdateUser }) => {
   const { colors } = useTheme();
 
   return (
@@ -43,7 +44,7 @@ const TabNavigator = ({ user, onLogout }) => {
         tabBarLabelStyle: styles.tabLabel,
         tabBarActiveTintColor: colors.accentOrange,
         tabBarInactiveTintColor: colors.textSecondary,
-        tabBarHideOnKeyboard: true, // Hide tab bar when keyboard opens
+        tabBarHideOnKeyboard: true, 
       }}
     >
       <Tab.Screen
@@ -84,7 +85,8 @@ const TabNavigator = ({ user, onLogout }) => {
       />
       <Tab.Screen
         name="ProfileTab"
-        children={(props) => <ProfileScreen {...props} user={user} onLogout={onLogout} />}
+        // UPDATED: Pass onUpdateUser to ProfileScreen
+        children={(props) => <ProfileScreen {...props} user={user} onLogout={onLogout} onUpdateUser={onUpdateUser} />}
         options={{
           tabBarLabel: 'Profile',
           tabBarIcon: ({ focused, color }) => (
@@ -98,11 +100,12 @@ const TabNavigator = ({ user, onLogout }) => {
   );
 };
 
-const AppNavigator = ({ user, onLogout }) => {
+// UPDATED: Destructure onUpdateUser and pass to TabNavigator
+const AppNavigator = ({ user, onLogout, onUpdateUser }) => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Main">
-        {() => <TabNavigator user={user} onLogout={onLogout} />}
+        {() => <TabNavigator user={user} onLogout={onLogout} onUpdateUser={onUpdateUser} />}
       </Stack.Screen>
       <Stack.Screen 
         name="Add" 
@@ -119,22 +122,12 @@ const AppNavigator = ({ user, onLogout }) => {
 
 const styles = StyleSheet.create({
   tabBar: (colors) => ({
-    position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 25 : 20,
-    left: 20,
-    right: 20,
-    elevation: 10, // Android Shadow
     backgroundColor: colors.card,
-    borderRadius: 25,
-    height: 70,
-    borderTopWidth: 0,
-    // iOS Shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    paddingBottom: Platform.OS === 'ios' ? 0 : 10,
-    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    height: 65,
+    paddingTop: 5,
+    paddingBottom: Platform.OS === 'ios' ? 0 : 5,
   }),
   tabLabel: {
     fontSize: 12,

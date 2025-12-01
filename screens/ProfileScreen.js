@@ -9,7 +9,8 @@ import { useTheme } from '../context/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import CustomAlert from '../components/CustomAlert';
 
-const ProfileScreen = ({ user, onLogout }) => {
+// UPDATED: Accept onUpdateUser prop
+const ProfileScreen = ({ user, onLogout, onUpdateUser }) => {
     const db = useSQLiteContext();
     const { theme, toggleTheme, colors, isNotificationsEnabled, toggleNotifications } = useTheme();
     
@@ -71,6 +72,12 @@ const ProfileScreen = ({ user, onLogout }) => {
             setProfilePicture(newUri);
             try {
                 await updateProfilePicture(db, user.id, newUri);
+                
+                // NEW: Update global user state so HomeScreen reflects changes immediately
+                if (onUpdateUser) {
+                    onUpdateUser({ ...user, profile_picture: newUri });
+                }
+
                 showToast("Profile picture updated");
             } catch (error) {
                 console.error("Failed to update profile picture:", error);

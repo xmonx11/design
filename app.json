@@ -12,7 +12,7 @@
       "color": "#FF9500"
     },
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/app-logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },

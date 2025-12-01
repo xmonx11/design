@@ -183,7 +183,7 @@ const MissedScreen = ({ user }) => {
                         </Text>
                     </View>
                     <View style={styles.alertIcon}>
-                        <AlertCircle size={32} color="#FFF" style={{ opacity: 0.9 }} />
+                        <AlertCircle size={32} color="#FFF" />
                     </View>
                 </View>
             </LinearGradient>
@@ -305,9 +305,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
     },
     alertIcon: {
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        borderRadius: 12,
-        padding: 10,
+        justifyContent: 'center',
     },
 
     // Filters
