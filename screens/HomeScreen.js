@@ -292,7 +292,7 @@ const HomeScreen = ({ user, navigation }) => {
                         <View style={styles.statDivider} />
                         <View style={styles.statItem}>
                             <Text style={styles.statNumber}>{allCompletedCount}</Text>
-                            <Text style={styles.statLabel}>Completed</Text>
+                            <Text style={styles.statLabel}>Task Completed</Text>
                         </View>
                     </>
                 )}
@@ -306,7 +306,7 @@ const HomeScreen = ({ user, navigation }) => {
                         <View style={styles.statDivider} />
                         <View style={styles.statItem}>
                             <Text style={styles.statNumber}>{completedTasksCount}</Text>
-                            <Text style={styles.statLabel}>Completed</Text>
+                            <Text style={styles.statLabel}> Task Completed</Text>
                         </View>
                     </>
                 )}
@@ -320,7 +320,7 @@ const HomeScreen = ({ user, navigation }) => {
                         <View style={styles.statDivider} />
                         <View style={styles.statItem}>
                             <Text style={styles.statNumber}>{completedSchedulesCount}</Text>
-                            <Text style={styles.statLabel}>Completed</Text>
+                            <Text style={styles.statLabel}>Task Completed</Text>
                         </View>
                     </>
                 )}
@@ -353,7 +353,7 @@ const HomeScreen = ({ user, navigation }) => {
             )}
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll} contentContainerStyle={styles.tabsContent}>
-                {['All', 'Today', 'Upcoming', 'Completed'].map((tab) => (
+                {['All', 'Today', 'Upcoming', 'Task Completed'].map((tab) => (
                     <TouchableOpacity key={tab} onPress={() => setActiveTab(tab)}>
                         <TabChip label={tab} active={activeTab === tab} />
                     </TouchableOpacity>

@@ -1,69 +1,88 @@
 import { GoogleGenAI } from "@google/genai";
 
 // ⚠️ Security Warning: Do not store keys in plain text in production.
-// const API_KEY = "AIzaSyCvF__25kknJmb4HVYr-uhOaOyD47k_DTg";
 const API_KEY = process.env.EXPO_PUBLIC_AI_API_KEY; 
-// Initialize the client with the new SDK
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
-export const getScheduleRecommendation = async (userTasks, userPrompt) => {
+export const getScheduleRecommendation = async (userTasks, userPrompt, imageBase64 = null) => {
   try {
     const currentDate = new Date();
     const dateString = currentDate.toDateString();
     const timeString = currentDate.toLocaleTimeString();
 
-    // 1. Construct the Prompt
-    const prompt = `
-      You are a smart scheduling assistant for a React Native app.
+    // 1. Construct the System Instructions
+    const systemInstruction = `
+      You are a smart scheduling assistant.
+      Current Date: ${dateString}, ${timeString}
       
-      **Context:**
-      - Current Date & Time: ${dateString}, ${timeString}
-      - Existing Tasks: ${JSON.stringify(userTasks)}
+      **Goal:** Analyze the user's request and optional image to find schedulable items.
       
-      **User Request:** "${userPrompt}"
+      **Rules:**
+      1. If an image is provided, extract all events, tasks, or deadlines from it.
+      2. If multiple items are found, extract them all (Bulk Mode).
+      3. Conflict Check: Avoid these existing busy times: ${JSON.stringify(userTasks.map(t => ({ start: t.date + ' ' + t.time, type: t.type })))}.
       
-      **Goal:** Analyze the user's existing schedule and find a conflict-free time slot to fulfill their request.
+      **Output:**
+      Return PURE JSON only. No Markdown formatting (no \`\`\`json).
+      Your response must be a JSON object with a "tasks" key containing an array.
       
-      **Output Requirement:**
-      Return ONLY a valid JSON object. Do not include markdown formatting (no \`\`\`json).
-      
-      The JSON must strictly match this schema:
+      Structure:
       {
-        "title": "String (Task Title)",
-        "description": "String (Brief description)",
-        "date": "String (YYYY-MM-DD)",
-        "time": "String (HH:MM AM/PM)",
-        "reason": "String (Short explanation)"
+        "tasks": [
+          {
+            "title": "String",
+            "description": "String",
+            "date": "YYYY-MM-DD",
+            "time": "HH:MM AM/PM",
+            "type": "Task" | "Meeting" | "Class" | "Work",
+            "reason": "Why you chose this slot"
+          }
+        ]
       }
     `;
 
-    // 2. Generate Content using the new SDK and active model (Gemini 2.5 Flash)
+    // 2. Prepare Contents
+    let contents = [];
+    
+    // Add text prompt
+    contents.push({ text: userPrompt || "Analyze this image and schedule everything found." });
+
+    // Add image if available
+    if (imageBase64) {
+      contents.push({
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: imageBase64
+        }
+      });
+    }
+
+    // 3. Generate Content
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash", 
-      contents: prompt,
+      contents: [
+        {
+            role: "user",
+            parts: contents
+        }
+      ],
       config: {
         responseMimeType: "application/json",
+        systemInstruction: systemInstruction,
       }
     });
 
-    // 3. Clean and Parse Response
-    // Note: In the new SDK, 'text' is a property, not a function.
+    // 4. Clean and Parse Response
     let text = response.text; 
-
     console.log("Raw AI Response:", text);
 
-    // Remove any markdown if present
+    // Remove any markdown if present (just in case)
     if (text && typeof text === 'string') {
         text = text.replace(/```json/g, "").replace(/```/g, "").trim();
     }
 
-    const recommendation = JSON.parse(text);
-    
-    if (!recommendation.title || !recommendation.date || !recommendation.time) {
-        throw new Error("Incomplete recommendation data received.");
-    }
-
-    return recommendation;
+    const result = JSON.parse(text);
+    return result.tasks || []; // Always return an array
 
   } catch (error) {
     console.error("AI Service Error:", error);

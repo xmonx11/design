@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { 
     View, Text, StyleSheet, TouchableOpacity, TextInput, 
-    ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard 
+    ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard,
+    Image, ScrollView, Alert
 } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
-import { getUpcomingTasks } from '../services/Database';
+import * as ImagePicker from 'expo-image-picker'; 
+import { getUpcomingTasks, addTask } from '../services/Database';
+import { scheduleTaskNotification } from '../services/NotificationService';
 import { getScheduleRecommendation } from '../services/AiServices';
-import { Wand2, X, Sparkles, Calendar } from 'lucide-react-native';
+import { Wand2, X, Send, Plus, Calendar, Check } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,37 +21,89 @@ const AiAssistantScreen = ({ navigation, route }) => {
     const insets = useSafeAreaInsets();
 
     const [aiPrompt, setAiPrompt] = useState('');
-    const [aiResult, setAiResult] = useState(null);
+    const [selectedImage, setSelectedImage] = useState(null);
+    const [generatedTasks, setGeneratedTasks] = useState([]); 
     const [isAiLoading, setIsAiLoading] = useState(false);
 
+    // --- Image Picker ---
+    const pickImage = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 0.5, // Lower quality for faster AI processing
+            base64: true,
+        });
+
+        if (!result.canceled) {
+            setSelectedImage(result.assets[0]);
+        }
+    };
+
+    // --- Submit to Gemini ---
     const handleAiSubmit = async () => {
+        if (!aiPrompt.trim() && !selectedImage) return;
         Keyboard.dismiss();
-        if (!aiPrompt.trim()) return;
         
         setIsAiLoading(true);
         try {
             const today = new Date().toISOString().split('T')[0]; 
             const allUpcomingTasks = await getUpcomingTasks(db, user.id, today);
-            const contextTasks = allUpcomingTasks.slice(0, 50);
-            const recommendation = await getScheduleRecommendation(contextTasks, aiPrompt);
-            setAiResult(recommendation);
+            
+            // Pass text AND image base64
+            const recommendations = await getScheduleRecommendation(
+                allUpcomingTasks.slice(0, 20), 
+                aiPrompt,
+                selectedImage?.base64
+            );
+            
+            setGeneratedTasks(recommendations);
         } catch (error) {
             console.error("AI generation failed:", error);
-            // Optionally handle error state here
+            Alert.alert("Error", "Failed to generate schedule. Please try again.");
         } finally {
             setIsAiLoading(false);
         }
     };
 
-    const handleAddRecommendation = () => {
-        navigation.replace('Add', { 
-            user: user,
-            prefilledData: aiResult 
-        });
+    // --- Bulk Add Logic ---
+    const handleAcceptAll = async () => {
+        try {
+            for (const task of generatedTasks) {
+                // Schedule Notification
+                const notifId = await scheduleTaskNotification(task.title, task.date, task.time, 5, task.type);
+                
+                // Add to DB
+                await addTask(db, {
+                    title: task.title,
+                    description: task.description || 'AI Generated',
+                    date: task.date,
+                    time: task.time,
+                    type: task.type || 'Task',
+                    location: '',
+                    userId: user.id,
+                    repeat_frequency: 'none',
+                    notification_id: notifId,
+                    reminder_minutes: 5
+                });
+            }
+            Alert.alert("Success", `${generatedTasks.length} items added to your schedule!`, [
+                { text: "OK", onPress: () => navigation.goBack() }
+            ]);
+        } catch (e) {
+            console.error(e);
+            Alert.alert("Error", "Could not save tasks.");
+        }
     };
 
     const handleClose = () => {
         navigation.goBack();
+    };
+
+    // Remove single item from review list
+    const removeTask = (index) => {
+        const newTasks = [...generatedTasks];
+        newTasks.splice(index, 1);
+        setGeneratedTasks(newTasks);
     };
 
     return (
@@ -60,132 +115,116 @@ const AiAssistantScreen = ({ navigation, route }) => {
             />
             
             <KeyboardAvoidingView 
-                // UPDATED: Use 'height' for Android to correctly resize the container when keyboard opens
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                // FIX: Use 'padding' for both platforms to force push-up behavior
+                behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
                 style={styles.aiKeyboardContainer}
                 pointerEvents="box-none"
+                // FIX: Add offset to ensure it clears any bottom bars/navigation
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} 
             >
-                <View style={[
-                    styles.aiBottomSheet, 
-                    { 
-                        backgroundColor: colors.card,
-                        paddingBottom: Math.max(insets.bottom, 20) 
-                    }
-                ]}>
-                    <View style={styles.dragHandleContainer}>
-                        <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
-                    </View>
-
+                <View style={[styles.aiBottomSheet, { backgroundColor: colors.card, paddingBottom: Math.max(insets.bottom, 20) }]}>
+                    
                     {/* Header */}
-                    <View style={styles.aiModalHeader}>
-                        <View style={[styles.aiIconBadge, { backgroundColor: colors.accentOrange + '15' }]}>
-                            <Wand2 size={24} color={colors.accentOrange} />
-                        </View>
-                        <View style={styles.aiTitleContainer}>
-                            <Text style={[styles.aiModalTitle, { color: colors.textPrimary }]}>Smart Assistant</Text>
-                            <Text style={[styles.aiModalSubtitle, { color: colors.textSecondary }]}>
-                                {aiResult ? "Here is what I found" : "How can I help you schedule?"}
+                    <View style={styles.headerRow}>
+                        <View style={styles.titleWrapper}>
+                            <Wand2 size={20} color={colors.accentOrange} style={{marginRight:8}} />
+                            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
+                                {generatedTasks.length > 0 ? "Review Plan" : "Smart Assistant"}
                             </Text>
                         </View>
-                        <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+                        <TouchableOpacity onPress={handleClose}>
                             <X size={24} color={colors.textSecondary} />
                         </TouchableOpacity>
                     </View>
 
-                    {/* Content Area */}
-                    {!aiResult && (
-                        <View style={styles.aiInputWrapper}>
-                            <TextInput 
-                                style={[styles.aiTextInput, { 
-                                    backgroundColor: colors.inputBackground, 
-                                    color: colors.textPrimary,
-                                    borderColor: colors.border
-                                }]}
-                                placeholder="e.g., Schedule a dentist appointment for next Monday at 10 AM..."
-                                placeholderTextColor={colors.textSecondary}
-                                value={aiPrompt}
-                                onChangeText={setAiPrompt}
-                                multiline
-                                textAlignVertical="top"
-                                autoFocus={true}
-                            />
-                            <View style={styles.inputFooter}>
-                                <Text style={[styles.inputHint, { color: colors.textSecondary }]}>
-                                    Try mentioning dates, times, or durations.
+                    {/* Content: Either Loading, Results List, or Empty Space */}
+                    <ScrollView style={styles.contentArea} showsVerticalScrollIndicator={false}>
+                        
+                        {isAiLoading && (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator size="large" color={colors.accentOrange} />
+                                <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+                                    {selectedImage ? "Scanning image..." : "Thinking..."}
                                 </Text>
                             </View>
-                        </View>
-                    )}
+                        )}
 
-                    {/* Loading State */}
-                    {isAiLoading && (
-                        <View style={styles.aiLoadingContainer}>
-                            <ActivityIndicator size="large" color={colors.accentOrange} />
-                            <Text style={[styles.aiLoadingText, { color: colors.textSecondary }]}>Generating plan...</Text>
-                        </View>
-                    )}
-
-                    {/* Result Card */}
-                    {aiResult && !isAiLoading && (
-                        <View style={styles.aiResultWrapper}>
-                            <View style={[styles.recommendationCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                                <View style={styles.recommendationHeader}>
-                                    <Text style={[styles.recommendationTitle, { color: colors.textPrimary }]}>{aiResult.title}</Text>
-                                    <View style={[styles.timeBadge, { backgroundColor: colors.accentOrange }]}>
-                                        <Text style={styles.timeBadgeText}>{aiResult.time}</Text>
-                                    </View>
+                        {/* Generated Results List */}
+                        {!isAiLoading && generatedTasks.map((task, index) => (
+                            <View key={index} style={[styles.resultCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                                <View style={styles.resultHeader}>
+                                    <Text style={[styles.resultTitle, { color: colors.textPrimary }]}>{task.title}</Text>
+                                    <TouchableOpacity onPress={() => removeTask(index)}>
+                                        <X size={18} color={colors.textSecondary} />
+                                    </TouchableOpacity>
                                 </View>
-                                <View style={styles.recommendationMeta}>
-                                    <Text style={[styles.recommendationDate, { color: colors.textSecondary }]}>
-                                        <Calendar size={14} color={colors.textSecondary} /> {aiResult.date}
-                                    </Text>
-                                </View>
-                                <View style={styles.divider} />
-                                <Text style={[styles.recommendationReason, { color: colors.textSecondary }]}>
-                                    "{aiResult.reason}"
+                                <Text style={[styles.resultTime, { color: colors.textSecondary }]}>
+                                    <Calendar size={14} color={colors.textSecondary} /> {task.date} at {task.time}
                                 </Text>
+                                <Text style={[styles.resultReason, { color: colors.accentOrange }]}>{task.reason}</Text>
                             </View>
-                        </View>
-                    )}
+                        ))}
+                    </ScrollView>
 
-                    {/* Actions */}
-                    <View style={styles.aiActions}>
-                        {!aiResult && !isAiLoading && (
-                            <TouchableOpacity 
-                                onPress={handleAiSubmit}
-                                activeOpacity={0.8}
-                                style={styles.fullWidthButton}
+                    {/* Actions if tasks generated */}
+                    {generatedTasks.length > 0 && !isAiLoading && (
+                        <TouchableOpacity onPress={handleAcceptAll} style={styles.acceptButton}>
+                            <LinearGradient
+                                colors={[colors.accentOrange, colors.progressRed]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.gradientBtn}
                             >
-                                <LinearGradient
-                                    colors={[colors.accentOrange, colors.progressRed]}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={styles.gradientButton}
-                                >
-                                    <Sparkles size={20} color="#FFF" style={{ marginRight: 8 }} />
-                                    <Text style={styles.gradientButtonText}>Generate Schedule</Text>
-                                </LinearGradient>
-                            </TouchableOpacity>
-                        )}
+                                <Check size={20} color="white" style={{marginRight: 8}} />
+                                <Text style={styles.acceptBtnText}>Add All ({generatedTasks.length})</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    )}
 
-                        {aiResult && (
-                            <View style={styles.resultActions}>
+                    {/* Input Bar (Hidden if viewing results to keep it clean) */}
+                    {generatedTasks.length === 0 && !isAiLoading && (
+                        <View style={styles.inputContainer}>
+                            
+                            {/* Image Preview Badge */}
+                            {selectedImage && (
+                                <View style={styles.imagePreviewBadge}>
+                                    <Image source={{ uri: selectedImage.uri }} style={styles.previewImage} />
+                                    <TouchableOpacity 
+                                        style={styles.removeImageBtn}
+                                        onPress={() => setSelectedImage(null)}
+                                    >
+                                        <X size={12} color="white" />
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+
+                            <View style={[styles.inputWrapper, { backgroundColor: colors.inputBackground }]}>
                                 <TouchableOpacity 
-                                    style={[styles.actionButton, { borderColor: colors.border, borderWidth: 1 }]} 
-                                    onPress={() => setAiResult(null)}
+                                    style={styles.iconButton} 
+                                    onPress={pickImage}
                                 >
-                                    <Text style={[styles.actionButtonText, { color: colors.textPrimary }]}>Try Again</Text>
+                                    <Plus size={24} color={colors.textSecondary} />
                                 </TouchableOpacity>
-                                
+
+                                <TextInput 
+                                    style={[styles.textInput, { color: colors.textPrimary }]}
+                                    placeholder={selectedImage ? "What should I schedule from this?" : "Type or scan a schedule..."}
+                                    placeholderTextColor={colors.textSecondary}
+                                    value={aiPrompt}
+                                    onChangeText={setAiPrompt}
+                                    multiline
+                                />
+
                                 <TouchableOpacity 
-                                    style={[styles.actionButton, { backgroundColor: colors.accentOrange }]} 
-                                    onPress={handleAddRecommendation}
+                                    style={[styles.sendButton, { backgroundColor: aiPrompt || selectedImage ? colors.accentOrange : colors.border }]} 
+                                    onPress={handleAiSubmit}
+                                    disabled={!aiPrompt && !selectedImage}
                                 >
-                                    <Text style={[styles.actionButtonText, { color: '#FFF' }]}>Add to Planner</Text>
+                                    <Send size={18} color="white" />
                                 </TouchableOpacity>
                             </View>
-                        )}
-                    </View>
+                        </View>
+                    )}
                 </View>
             </KeyboardAvoidingView>
         </View>
@@ -193,172 +232,102 @@ const AiAssistantScreen = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
-    modalOverlay: {
-        flex: 1,
-    },
-    aiKeyboardContainer: {
-        flex: 1,
-        justifyContent: 'flex-end',
-    },
-    modalBackdrop: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-    },
+    modalOverlay: { flex: 1 },
+    modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
+    aiKeyboardContainer: { flex: 1, justifyContent: 'flex-end' },
     aiBottomSheet: {
         borderTopLeftRadius: 25,
         borderTopRightRadius: 25,
-        paddingHorizontal: 25,
-        paddingTop: 25,
-        minHeight: 350,
-        width: '100%',
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        maxHeight: '85%', // Prevent taking full screen
+        minHeight: 200,
     },
-    dragHandleContainer: {
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 15,
     },
-    dragHandle: {
+    titleWrapper: { flexDirection: 'row', alignItems: 'center' },
+    modalTitle: { fontSize: 18, fontWeight: 'bold' },
+    
+    contentArea: { maxHeight: 400 },
+    
+    // Loading
+    loadingContainer: { alignItems: 'center', padding: 30 },
+    loadingText: { marginTop: 10, fontSize: 14 },
+
+    // Result Cards
+    resultCard: {
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 10,
+        borderWidth: 1,
+    },
+    resultHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    resultTitle: { fontSize: 16, fontWeight: 'bold', flex: 1, marginRight: 10 },
+    resultTime: { fontSize: 14, marginTop: 4 },
+    resultReason: { fontSize: 12, marginTop: 8, fontStyle: 'italic' },
+
+    // Input Bar Area
+    inputContainer: { marginTop: 10 },
+    inputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 25,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+    },
+    iconButton: { padding: 8 },
+    textInput: {
+        flex: 1,
+        fontSize: 16,
+        maxHeight: 100,
+        paddingHorizontal: 10,
+        paddingVertical: 5, 
+    },
+    sendButton: {
         width: 40,
-        height: 4,
-        borderRadius: 2,
-        opacity: 0.5,
-    },
-    aiModalHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    aiIconBadge: {
-        padding: 10,
-        borderRadius: 14,
-        marginRight: 15,
-    },
-    aiTitleContainer: {
-        flex: 1,
-    },
-    aiModalTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-    },
-    aiModalSubtitle: {
-        fontSize: 14,
-        marginTop: 2,
-    },
-    closeButton: {
-        padding: 5,
-    },
-    aiInputWrapper: {
-        marginBottom: 20,
-    },
-    aiTextInput: {
-        borderRadius: 16,
-        padding: 15,
-        fontSize: 16,
-        borderWidth: 1,
-        minHeight: 100,
-    },
-    inputFooter: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        marginTop: 8,
-    },
-    inputHint: {
-        fontSize: 12,
-    },
-    aiLoadingContainer: {
-        alignItems: 'center',
-        paddingVertical: 40,
-    },
-    aiLoadingText: {
-        marginTop: 15,
-        fontSize: 16,
-        fontWeight: '500',
-    },
-    aiResultWrapper: {
-        marginBottom: 25,
-    },
-    recommendationCard: {
+        height: 40,
         borderRadius: 20,
-        padding: 20,
-        borderWidth: 1,
-    },
-    recommendationHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    recommendationTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        flex: 1,
-        marginRight: 10,
-    },
-    timeBadge: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-    },
-    timeBadgeText: {
-        color: '#FFF',
-        fontSize: 12,
-        fontWeight: 'bold',
-    },
-    recommendationMeta: {
-        marginBottom: 15,
-    },
-    recommendationDate: {
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    divider: {
-        height: 1,
-        backgroundColor: 'rgba(0,0,0,0.05)',
-        marginBottom: 15,
-    },
-    recommendationReason: {
-        fontSize: 14,
-        fontStyle: 'italic',
-        lineHeight: 20,
-    },
-    aiActions: {
-        marginTop: 10,
-    },
-    fullWidthButton: {
-        width: '100%',
-        shadowColor: '#FF9500',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
-    },
-    gradientButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 16,
-        borderRadius: 16,
-    },
-    gradientButtonText: {
-        color: '#FFF',
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    resultActions: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: 15,
-    },
-    actionButton: {
-        flex: 1,
-        paddingVertical: 15,
-        borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    actionButtonText: {
-        fontSize: 16,
-        fontWeight: 'bold',
+    
+    // Image Preview
+    imagePreviewBadge: {
+        position: 'absolute',
+        top: -70,
+        left: 0,
+        width: 60,
+        height: 60,
+        borderRadius: 10,
+        overflow: 'hidden',
+        borderWidth: 2,
+        borderColor: 'white',
+        elevation: 5,
     },
+    previewImage: { width: '100%', height: '100%' },
+    removeImageBtn: {
+        position: 'absolute',
+        top: 2,
+        right: 2,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        borderRadius: 10,
+        padding: 2,
+    },
+
+    // Accept All Button
+    acceptButton: { marginTop: 15 },
+    gradientBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 14,
+        borderRadius: 16,
+    },
+    acceptBtnText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
 });
 
 export default AiAssistantScreen;
