@@ -254,7 +254,8 @@ const HomeScreen = ({ user, navigation }) => {
             
             // Schedule Missed (if non-repeating)
             let missedNotifId = null;
-            if (!task.repeat_frequency || task.repeat_frequency === 'none') {
+            // CHANGE: Only schedule missed notifications for non-repeating TASKS
+            if ((!task.repeat_frequency || task.repeat_frequency === 'none') && task.type === 'Task') {
                 missedNotifId = await scheduleMissedNotification(
                     task.title,
                     task.date,
@@ -668,7 +669,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   taskList: {
-    paddingBottom: 100,
+    paddingBottom: 0, // Changed from 100 to 0
   },
   emptyTasks: {
     alignItems: 'center',

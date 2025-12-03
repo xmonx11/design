@@ -206,7 +206,8 @@ const EditScreen = ({ task, onClose }) => {
                 activeType 
             );
 
-            if (repeatFrequency === 'none') {
+            // Only schedule a missed notification for non-repeating Tasks
+            if (repeatFrequency === 'none' && activeType === 'Task') {
                 newMissedNotificationId = await scheduleMissedNotification(
                     title,
                     finalDate,

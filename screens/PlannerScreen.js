@@ -321,8 +321,7 @@ const PlannerScreen = ({ navigation, user }) => {
                         )}
                     </View>
                 )}
-                {/* Spacer for FAB */}
-                <View style={{ height: 80 }} />
+                {/* Spacer removed to reduce gap */}
             </ScrollView>
 
             {/* FAB */}
@@ -542,7 +541,8 @@ const styles = StyleSheet.create({
 
     // Common
     scrollContent: {
-        paddingBottom: 20,
+        paddingHorizontal: 10,
+        paddingBottom: 0, // Changed from 20 to 0
     },
     emptyTasks: {
         paddingVertical: 60,

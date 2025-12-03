@@ -235,8 +235,8 @@ const AddScreen = ({ navigation, route, user: userProp }) => {
                     activeType 
                 );
 
-                // 2. Missed Notification (Only for non-repeating items for simplicity)
-                if (repeatFrequency === 'none') {
+                // 2. Missed Notification (Only for non-repeating items AND if it is a Task)
+                if (repeatFrequency === 'none' && activeType === 'Task') {
                     missedNotificationId = await scheduleMissedNotification(
                         taskTitle,
                         targetDate,

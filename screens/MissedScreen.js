@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
 
     // List
     taskList: {
-        paddingBottom: 4,
+        paddingBottom: 0, // Changed from 4 to 0
     },
     taskWrapper: {
         marginBottom: 4, // Spacing between cards handled by TaskCard margin usually, but ensuring flow
