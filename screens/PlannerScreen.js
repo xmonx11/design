@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
     // Tabs
     viewTabsWrapper: {
         flexDirection: 'row',
-        marginBottom: 20,
+        marginBottom: 15, // Changed from 20 to 15 to match Home/Missed screens
         gap: 12,
     },
     viewTab: {
@@ -536,13 +536,13 @@ const styles = StyleSheet.create({
     
     // Task List Container
     taskListContainer: {
-        paddingTop: 5,
+        paddingTop: 0, // Changed from 5 to 0 to align top spacing
     },
 
     // Common
     scrollContent: {
-        paddingHorizontal: 10,
-        paddingBottom: 0, // Changed from 20 to 0
+        // Removed paddingHorizontal: 10 because the parent 'container' already has it
+        paddingBottom: 0,
     },
     emptyTasks: {
         paddingVertical: 60,

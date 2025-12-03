@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
         paddingBottom: 0, // Changed from 4 to 0
     },
     taskWrapper: {
-        marginBottom: 4, // Spacing between cards handled by TaskCard margin usually, but ensuring flow
+        marginBottom: 0, // Changed from 4 to 0 to match Home and Planner screens
     },
     
     // Empty State
