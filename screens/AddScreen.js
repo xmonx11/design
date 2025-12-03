@@ -166,7 +166,7 @@ const AddScreen = ({ navigation, route, user: userProp }) => {
     };
 
     const handleOpenMap = () => {
-        showAlert("Open Map", "This will open a map to select a location.", "info");
+        // showAlert("Open Map", "This will open a map to select a location.", "info");
     };
 
     const handleRepeatDayToggle = (day) => {

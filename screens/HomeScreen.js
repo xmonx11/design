@@ -205,6 +205,13 @@ const HomeScreen = ({ user, navigation }) => {
     setIsFilterVisible(!isFilterVisible);
   };
 
+  const getSectionTitle = () => {
+    if (activeFilter === 'All') return 'Tasks and Schedules';
+    if (activeFilter === 'Task') return 'My Tasks';
+    if (activeFilter === 'Schedule') return 'My Schedules';
+    return 'My Tasks'; // Default fallback
+  };
+
   // Calculations for stats
   const taskItems = allTasks.filter(t => t.type === 'Task');
   const scheduleItems = allTasks.filter(t => t.type !== 'Task');
@@ -330,7 +337,7 @@ const HomeScreen = ({ user, navigation }) => {
         {/* Filter & Tabs Section */}
         <View style={styles.controlsContainer}>
             <View style={styles.listHeader}>
-                <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>My Tasks</Text>
+                <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{getSectionTitle()}</Text>
                 <TouchableOpacity onPress={toggleFilterVisibility} style={styles.filterButton}>
                     <ListFilter size={20} color={isFilterVisible ? colors.accentOrange : colors.textSecondary} />
                 </TouchableOpacity>

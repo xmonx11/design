@@ -49,9 +49,14 @@ const EditScreen = ({ task, onClose }) => {
     const [description, setDescription] = useState(task.description);
     const [category, setCategory] = useState(task.type);
     const [location, setLocation] = useState(task.location); 
-    const [date, setDate] = useState(task.date ? new Date(task.date) : new Date());
-    const [startDate, setStartDate] = useState(task.start_date ? new Date(task.start_date) : new Date());
-    const [endDate, setEndDate] = useState(task.end_date ? new Date(task.end_date) : new Date());
+    
+    // FIX: Fallback to task.date if start_date is null (prevents reverting to 'Today')
+    const initialDate = task.date ? new Date(task.date) : new Date();
+    const initialStartDate = task.start_date ? new Date(task.start_date) : initialDate;
+    
+    const [date, setDate] = useState(initialDate);
+    const [startDate, setStartDate] = useState(initialStartDate);
+    const [endDate, setEndDate] = useState(task.end_date ? new Date(task.end_date) : initialStartDate);
     
     // Time parsing helper
     const parseTimeString = (timeStr) => {
@@ -76,8 +81,17 @@ const EditScreen = ({ task, onClose }) => {
     const [repeatDays, setRepeatDays] = useState(task.repeat_days ? JSON.parse(task.repeat_days) : []);
     const [reminderMinutes, setReminderMinutes] = useState(task.reminder_minutes || 5);
 
-    const screenTitle = task.type === 'Task' ? 'Edit Task' : 'Edit Schedule';
-    const activeType = task.type === 'Task' ? 'Task' : 'Schedule';
+    // FIX: Determine activeType based on the CURRENT category state, not just the prop
+    const isTaskCategory = (cat) => taskCategories.some(tc =>Tc.name === cat) || cat === 'Task';
+    // Check if the current category is in the taskCategories list
+    const isCurrentCategoryTask = taskCategories.some(tc => tc.name === category);
+    
+    const activeType = isCurrentCategoryTask ? 'Task' : 'Schedule';
+    const screenTitle = activeType === 'Task' ? 'Edit Task' : 'Edit Schedule';
+    
+    // If activeType is Task, show Task categories. If Schedule, show Schedule categories.
+    // However, to allow switching types, we should probably show the relevant list or allow switching.
+    // For simplicity, we show the list that matches the current activeType logic.
     const categories = activeType === 'Task' ? taskCategories : scheduleCategories;
 
     // Formatting Helpers
@@ -150,21 +164,21 @@ const EditScreen = ({ task, onClose }) => {
         }
 
         const timeString = formatTime(time);
-        
-        // Handle logic for repeating instances (e.g., ID "15-2023-10-27" -> 15)
         const originalTaskId = typeof task.id === 'string' ? parseInt(task.id.split('-')[0], 10) : task.id;
 
+        // FIX: Ensure consistency. If it's a schedule, the primary date is startDate.
+        const finalDate = activeType === 'Task' ? formatDate(date) : formatDate(startDate);
+
         // --- CONFLICT CHECK LOGIC ---
-        // Only run for Schedules, not Tasks
         if (activeType === 'Schedule') {
             const hasConflict = await checkForScheduleConflict(db, task.userId, {
                 time: timeString, 
-                date: formatDate(startDate), // For one-time schedules, the date is the start date.
+                date: finalDate,
                 start_date: formatDate(startDate),
                 end_date: formatDate(endDate),
                 repeat_frequency: repeatFrequency,
                 repeat_days: repeatDays
-            }, originalTaskId); // Pass ID to exclude self from check
+            }, originalTaskId);
 
             if (hasConflict) {
                 showAlert('Schedule Conflict', `You already have a schedule at ${timeString}.`, 'error');
@@ -174,27 +188,23 @@ const EditScreen = ({ task, onClose }) => {
 
         let newNotificationId = task.notification_id;
         
-        // Cancel the old notification before creating a new one
         if (task.notification_id) {
             await cancelTaskNotification(task.notification_id);
         }
 
-        // Determine correct date variable based on type
-        const targetDate = activeType === 'Task' ? formatDate(date) : formatDate(startDate);
-
         newNotificationId = await scheduleTaskNotification(
             title, 
-            targetDate, 
+            finalDate, 
             timeString, 
             reminderMinutes,
-            activeType // Pass 'Task' or 'Schedule'
+            activeType 
         );
 
         const updatedTask = {
             id: originalTaskId,
             title,
             description,
-            date: activeType === 'Task' ? formatDate(date) : formatDate(startDate),
+            date: finalDate, // Save the correct date based on active type
             time: timeString,
             type: category,
             location: location, 
@@ -256,7 +266,8 @@ const EditScreen = ({ task, onClose }) => {
                     <View style={styles.sectionContainer}>
                         <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Category</Text>
                         <View style={styles.categoriesWrapper}>
-                            {categories.map((cat, index) => (
+                            {/* FIX: Show ALL categories to allow switching types */}
+                            {[...taskCategories, ...scheduleCategories].map((cat, index) => (
                                 <CategoryChip key={index} item={cat} />
                             ))}
                         </View>

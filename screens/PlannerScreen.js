@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Dimensions, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Dimensions, FlatList, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TaskCard } from '../components/TaskCard';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -10,6 +10,7 @@ import { Plus, ChevronLeft, ChevronRight, CalendarDays, AlertCircle, BookOpen, C
 import { useTheme } from '../context/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import CustomAlert from '../components/CustomAlert';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const { width } = Dimensions.get('window');
 
@@ -39,6 +40,7 @@ const PlannerScreen = ({ navigation, user }) => {
     const isFocused = useIsFocused();
     const [isEditModalVisible, setIsEditModalVisible] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
     // --- Alert Config ---
     const [alertConfig, setAlertConfig] = useState({
@@ -150,6 +152,14 @@ const PlannerScreen = ({ navigation, user }) => {
         setCurrentDate(newDate);
     };
 
+    const handleDateChange = (event, selectedDate) => {
+        const newDate = selectedDate || currentDate;
+        // For android, the picker is dismissed automatically. For iOS we need to hide it.
+        setShowDatePicker(Platform.OS === 'ios');
+        setCurrentDate(newDate);
+    };
+
+
     // --- Components ---
 
     const DateHeader = () => (
@@ -159,12 +169,14 @@ const PlannerScreen = ({ navigation, user }) => {
                 <TouchableOpacity onPress={goToPreviousDay} style={styles.navButton}>
                     <ChevronLeft size={22} color={colors.textSecondary} />
                 </TouchableOpacity>
-                <View style={styles.dateDisplay}>
-                    <CalendarDays size={16} color={colors.accentOrange} style={{ marginRight: 6 }} />
-                    <Text style={[styles.dateText, { color: colors.textPrimary }]}>
-                        {currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </Text>
-                </View>
+                <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+                    <View style={styles.dateDisplay}>
+                        <CalendarDays size={16} color={colors.accentOrange} style={{ marginRight: 6 }} />
+                        <Text style={[styles.dateText, { color: colors.textPrimary }]}>
+                            {currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </Text>
+                    </View>
+                </TouchableOpacity>
                 <TouchableOpacity onPress={goToNextDay} style={styles.navButton}>
                     <ChevronRight size={22} color={colors.textSecondary} />
                 </TouchableOpacity>
@@ -261,7 +273,7 @@ const PlannerScreen = ({ navigation, user }) => {
                 <View style={styles.summaryStats}>
                     <View style={styles.statItem}>
                         <Text style={styles.statNumber}>{schedules.length}</Text>
-                        <Text style={styles.statLabel}>Events</Text>
+                        <Text style={styles.statLabel}>Schedules</Text>
                     </View>
                     <View style={styles.statDivider} />
                     <View style={styles.statItem}>
@@ -273,7 +285,7 @@ const PlannerScreen = ({ navigation, user }) => {
                         <Text style={styles.statNumber}>
                             {tasks.filter(t => t.status === 'done').length}
                         </Text>
-                        <Text style={styles.statLabel}>Done</Text>
+                        <Text style={styles.statLabel}>Tasks Done</Text>
                     </View>
                 </View>
             </LinearGradient>
@@ -343,6 +355,15 @@ const PlannerScreen = ({ navigation, user }) => {
                 buttons={alertConfig.buttons}
                 onClose={closeAlert}
             />
+
+            {showDatePicker && (
+                <DateTimePicker
+                    value={currentDate}
+                    mode="date"
+                    display="default"
+                    onChange={handleDateChange}
+                />
+            )}
 
         </SafeAreaView>
     );
