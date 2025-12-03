@@ -153,7 +153,7 @@ const LoginScreen = ({ onLoginSuccess, onSignUpPress }) => {
                             style={styles.loginBtn}
                         >
                             <Text style={styles.loginBtnText}>Sign In</Text>
-                            <ArrowRight size={20} color="#FFF" style={{ marginLeft: 8 }} />
+                           
                         </LinearGradient>
                     </TouchableOpacity>
 
@@ -163,7 +163,7 @@ const LoginScreen = ({ onLoginSuccess, onSignUpPress }) => {
                 <View style={styles.footer}>
                     <Text style={[styles.footerText, { color: colors.textSecondary }]}>Don't have an account? </Text>
                     <TouchableOpacity onPress={onSignUpPress}>
-                        <Text style={[styles.signupText, { color: colors.accentOrange }]}>Sign Up</Text>
+                        <Text style={[styles.signupText, { color: colors.accentOrange }]}>Create Account</Text>
                     </TouchableOpacity>
                 </View>
 

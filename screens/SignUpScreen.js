@@ -232,7 +232,7 @@ const SignUpScreen = ({ onSignUp, onBackToLogin }) => {
                             style={styles.signUpBtn}
                         >
                             <Text style={styles.signUpBtnText}>Create Account</Text>
-                            <ArrowRight size={20} color="#FFF" style={{ marginLeft: 8 }} />
+                            
                         </LinearGradient>
                     </TouchableOpacity>
 

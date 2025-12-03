@@ -5,6 +5,7 @@ import * as SQLite from 'expo-sqlite';
 export const initDB = async (db) => {
   try {
     await db.execAsync(`
+  
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -250,6 +251,21 @@ const formatDate = (date) => {
     return `${year}-${month}-${day}`;
 };
 
+// NEW: Helper to normalize time strings (e.g. "8:00 AM" -> "08:00 AM")
+const normalizeTimeForComparison = (timeStr) => {
+    if (!timeStr) return '';
+    const parts = timeStr.trim().split(' ');
+    if (parts.length !== 2) return timeStr.trim(); 
+    
+    let [time, modifier] = parts;
+    let [hours, minutes] = time.split(':');
+    
+    // Ensure 2-digit hour
+    if (hours.length === 1) hours = `0${hours}`;
+    
+    return `${hours}:${minutes} ${modifier}`;
+};
+
 export const getRepeatingTasksInDateRange = async (db, userId, rangeStartDate, rangeEndDate) => {
   try {
     const allTasks = await db.getAllAsync(
@@ -325,12 +341,17 @@ export const checkForScheduleConflict = async (db, userId, newSchedule, excludeT
       return days[dateObj.getDay()];
     };
 
+    // Normalize the new schedule time for safe comparison
+    const newTimeNormalized = normalizeTimeForComparison(newSchedule.time);
+
     for (const existing of allSchedules) {
       // Skip self when editing
       if (excludeTaskId && existing.id === excludeTaskId) continue;
 
-      // 1. Time Check: Ensure we compare trimmed strings for safety
-      if (existing.time.trim() !== newSchedule.time.trim()) continue;
+      // 1. Time Check: Normalize existing time before comparing
+      const existingTimeNormalized = normalizeTimeForComparison(existing.time);
+      
+      if (existingTimeNormalized !== newTimeNormalized) continue;
 
       // 2. Date Range & Pattern Logic
       const existIsRepeat = existing.repeat_frequency && existing.repeat_frequency !== 'none';
