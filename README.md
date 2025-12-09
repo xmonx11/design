@@ -1,4 +1,4 @@
-Name: xmonx11
+Name: King Sarip
 Role: Design
 Project: Schedify
 
